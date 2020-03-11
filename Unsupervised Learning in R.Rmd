@@ -1,0 +1,590 @@
+---
+title: "Unsupervised Learning in R"
+author: "Melissa Kanyi"
+date: "3/8/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+# Introduction 
+An unsupervised learning project to understand the customer characteristics of Kira Plastinina.
+
+# Research Question
+Kira Plastinina is a Russian brand that is sold through a defunct chain of retail stores in Russia, Ukraine, Kazakhstan, Belarus, China, Philippines, and Armenia. 
+The brand’s Sales and Marketing team would like to understand their customer’s behavior from data that they have collected over the past year. More specifically, they would like to learn the characteristics of customer groups.
+
+# Experimental Design
+1. Problem Definition
+2. Experimental Design
+3. Data Sourcing
+4. Check the Data
+5. Perform Data Cleaning
+6. Perform Exploratory Data Analysis (Univariate, Bivariate & Multivariate)
+7. Implement the Solution
+8. Challenge the Solution
+9. Follow up Questions
+
+# Data Sourcing
+The dataset for this project can be found here: http://bit.ly/EcommerceCustomersDataset
+The dataset consists of 10 numerical and 8 categorical attributes. 
+
+# Checking the Data
+```{r}
+library(readr)
+online_shoppers_intention <- read_csv("Downloads/online_shoppers_intention.csv")
+View(online_shoppers_intention)
+```
+```{r}
+# changing the name of the dataset
+shop <- online_shoppers_intention
+shop
+```
+
+
+```{r}
+# preview of the first 6 rows
+head(shop)
+```
+
+
+```{r}
+# preview of the last 6 rows
+tail(shop)
+```
+
+
+```{r}
+# checking the summary of the data
+summary(shop)
+```
+- The dataset has 18 columns and 12,330 rows.
+- There are various data types: double, character and logical.
+- Some need to be encoded.
+
+# Loading the packages and libraries
+```{r}
+# Installing packages that we have not.
+
+library(devtools)
+install_github("vqv/ggbiplot", force = TRUE)
+install.packages("DataExplorer") 
+install.packages("Hmisc")
+install.packages("pastecs")
+install.packages("psych")
+install.packages("corrplot")
+install.packages("factoextra")
+install.packages("Rtsne")
+install.packages("caret")
+```
+
+
+```{r}
+# Loading Libraries necessary
+
+library(tidyverse)
+library(magrittr)
+library(warn = -1)
+
+library(ggbiplot)
+library(RColorBrewer)
+library(ggplot2)
+library(lattice)
+library(corrplot)
+
+# library(DataExplorer)
+# library(Hmisc)
+library(pastecs)
+library(psych)
+library(factoextra)
+library(Rtsne)
+library(caret)
+```
+```{r}
+library(pastecs)
+library(psych)
+library(Rtsne)
+library(caret)
+```
+
+# Data Cleaning
+## Missing Values
+```{r}
+# checking missing values by columns
+colSums(is.na(shop))
+```
+There are 14 missing values is each of the first 8 columns
+
+```{r}
+install.packages("magrittr") # package installations are only needed the first time you use it
+install.packages("dplyr")    # alternative installation of the %>%
+library(magrittr) # needs to be run every time you start R and want to use %>%
+library(dplyr)  # alternatively, this also loads %>%
+```
+
+```{r}
+# Filling the missing values using the mutate function and pipe operator
+# Each column will be filled with its own mean
+
+shop  = shop %>%
+
+    mutate(Administrative =replace(Administrative,is.na(Administrative),mean(Administrative,na.rm=TRUE)))%>%
+    mutate(Administrative_Duration =replace(Administrative_Duration,is.na(Administrative_Duration),mean(Administrative_Duration,na.rm=TRUE)))%>%
+    mutate(Informational = replace(Informational, is.na(Informational), mean(Informational, na.rm = TRUE)))%>%
+    mutate(Informational_Duration =replace(Informational_Duration,is.na(Informational_Duration),mean(Informational_Duration,na.rm=TRUE)))%>%
+    mutate(ProductRelated =replace(ProductRelated,is.na(ProductRelated),mean(ProductRelated,na.rm=TRUE)))%>%
+    mutate(ProductRelated_Duration = replace(ProductRelated_Duration, is.na(ProductRelated_Duration), mean(ProductRelated_Duration, na.rm = TRUE)))%>%
+    mutate(BounceRates =replace(BounceRates, is.na(BounceRates),mean(BounceRates,na.rm=TRUE)))%>%
+    mutate(ExitRates = replace(ExitRates, is.na(ExitRates), mean(ExitRates, na.rm = TRUE)))
+```
+
+```{r}
+# checking if there are still missing values
+colSums(is.na(shop))
+```
+
+## Duplicates
+```{r}
+# checking the unique rows
+dr <- unique(shop)
+dr
+```
+
+```{r}
+shop_dups <- shop[duplicated(shop),]
+dim(shop_dups)
+```
+
+```{r}
+# Removing duplicates
+
+shop <- shop[!duplicated(shop),]
+dim(shop)
+```
+
+# Outliers 
+
+```{r}
+# Creating separate boxplots for each attribute
+par(mfrow=c(3,4))
+for(i in 1:10) {
+	boxplot(shop[,i], main=names(shop)[i], col = "green")}
+```
+All the columns have a profusion of outliers.
+We will not remove as we want to understand the customers.
+
+We have outliers in nearly all the variables represented by rings.
+we will plot the individuals for clearer interpretation
+we will not remove the outliers as they may convey insights about special days or certain customers.
+
+# Exploratory Data Analysis
+## Univariate Analysis
+
+Univariate methods involve analysing one variable at a time.
+
+Univariate analysis includes:
+1. Measures of central tendancy: Mean, Median, Mode
+2. Measures of dispersion: Min, Max, Range, Quartiles, Variance, Standard deviation
+3. Other measures include: Skewness, Kurtosis
+4. Univariate Graphs: Histogram, Box plots, Bar plots, Kernel density plots
+
+```{r}
+# Computing the summary statistics for a particular column
+summary(shop$BounceRates)
+```
+The output provides the min, quartiles, mean , median max values of the Bounce rates.
+
+
+```{r}
+# The method describe() gives more measures of dispersion compared to the summary()
+# It outputs the range,variance,skewness, kurtosis and standard error in addition to measures of dispersion
+# The describe() function which is part of the Hmisc package displays the following additional statistics:
+
+# Number of rows
+# Standard deviation
+# Trimmed mean
+# Mean absolute deviation
+# Skewness
+# Kurtosis
+# Standard error
+
+summary(shop$BounceRates)
+```
+
+```{r}
+describe(shop$BounceRates)
+```
+
+```{r}
+# We can also calculate the mean of a variable using the code below
+
+mean(shop$BounceRates)
+```
+
+```{r}
+# The stat.desc() function which is part of the pastecs package displays the following additional statistics:
+
+# Variance
+# Coefficient of variation
+# Confidence interval for mean
+
+stat.desc(shop$BounceRates)
+```
+
+```{r}
+# Frequency Tables
+table(shop$Revenue)
+```
+The Revenue variable is imbalanced.
+Revenue was earned on few cases.
+
+## Visualizations
+### Histograms
+```{r}
+library(ggplot2)
+```
+
+```{r}
+
+# Plotting a Histogram of the Bounce rates relative to Weekend
+
+shop %>%
+    ggplot(aes(BounceRates)) +
+    geom_histogram(color = "white",fill = "orange") +
+    labs(title = "Distribution of Bounce Rates relative to Weekend",
+         x = "Bounce Rates",
+         y = "Frequency") +
+    facet_grid(Weekend~.)
+```
+
+
+```{r}
+# plotting a histogram of Exit Rates
+
+hist(shop$ExitRates,
+     main = "Histogram of Exit Rates",
+     xlab = "Exit Rates",
+     col = "magenta")
+```
+The distribution of Exit Rates is also right skewed.
+
+```{r}
+# Plotting a histogram Exit Rates relative to Revenue 
+
+shop %>%
+    ggplot(aes(ExitRates)) +
+    geom_histogram(color = "white",fill = "orange") +
+    labs(title = "Distribution of Exit Rates relative to Revenue",
+         x = "Exit Rates",
+         y = "Frequency") +
+    facet_grid(Revenue~.)
+```
+The histograms are right skewed with presence of outliers.
+
+```{r}
+# Plotting a histogram using ggplots 
+# 
+#
+
+shop %>%
+    ggplot(aes(ProductRelated)) +
+    geom_histogram(color = "Green",fill = "yellow") +
+    geom_vline(xintercept = mean(shop$ProductRelated), lwd = 2) +
+    labs(title = "Distribution of Product Related",
+         x = "Product Related",
+         y = "Frequency")
+```
+- The variable Product Related is skewed to the right.
+- It has a profusion of outliers too as we saw using a boxplot.
+- We will not remove them. we shall investigate them for insights
+
+```{r}
+# Plotting all histograms in the continuous variables in our data 
+
+#hist.default(shop)
+```
+
+### Barplots
+```{r}
+# Bar plot of the visitor type
+shop %>%
+    ggplot() +
+    geom_bar(aes(fct_infreq(VisitorType)), color = "red", fill = "steelblue" ) +
+    coord_flip() +
+    labs(title = "Visitor Type",
+         x = "Visitor type",
+         y = "Frequency")+
+    theme_minimal()
+```
+
+
+```{r}
+# Bar plots of the categorical/factor modes variables
+par(mfrow=c(4,1))
+for(i in 11:16) {
+	counts <- table(shop[,i])
+	name <- names(shop)[i]
+	barplot(counts, main=name, col = heat.colors(20))}
+```
+The bar plots shows the various factors of the categorical variables:
+
+1. May and November were busy months receiving high traffic, Feb received the least traffic of customers.
+2. Most vistors were returning type.
+3. Traffic mode number 2, 1 and 3 were heavily used in that order.
+4. Region number 1 had the most activity, region 5 was less active.
+5. Browser 2 and 1 were the most commonly used for browsing.
+6. Operating systems 2, 1 and 3 were mostly used by customers.
+
+### Kernel Density Plots
+```{r}
+# kernel density plot
+d <- density(shop$TrafficType)
+plot(d, main = "Kernel density of Page Values")
+polygon(d, col = "red", border = "blue" )
+```
+
+## Bivariate Analysis
+Analysis of two variables to determine their empirical relationship.
+
+### Scatter Plots
+```{r}
+# Plotting a scatter plot using the plot() method
+
+plot(ExitRates ~ BounceRates, dat = shop, 
+      col = "green",
+      main = "Bounce vs Exit Rates Scatter Plot")
+```
+From the scatter plot there is a strong positive correlation between Exit rates and Bounce rates.
+
+```{r}
+# Scatter plot using ggplots and fitting a line of best fit
+
+ggplot(shop, aes(x = Administrative_Duration, y = Informational_Duration)) + 
+        geom_point(size = 2, color= "green", shape = 23)+ 
+        geom_smooth(method=lm,  linetype="dashed",color="darkred", fill="blue")+
+        labs(title = "Info Duration vs Adm Duration Scatter Plot")
+```
+
+The is a positive correlation between the two variables but not very strong.
+
+```{r}
+# Scatter Plot using ggplots to find realtionship between two variables 
+# and their association with a categorical variable
+
+ggplot(shop, aes(x=BounceRates, y=ExitRates, shape= Weekend, color= Weekend, size= Weekend)) +
+  geom_point()+
+  labs(title = "Bounce vs Exit Rates By Weekend/Weekday Scatter Plot")
+```
+There is no clear distinction between the bounce and exit rates during the weekdays and weekends.
+
+### Stacked Bar Chart
+```{r}
+# Stacked bar chart: Revenue vs Month
+shop %>%
+    ggplot(aes(Revenue)) +
+    geom_bar(aes(fill = Month))+
+    labs(title = "Stacked Chart: Revenue by Month")
+```
+Though the data has an imbalance class, Nov, May and March are best months when the company makes most revenue.
+
+
+```{r}
+# Stacked bar chart: Revenue vs Day Type
+shop %>%
+    ggplot(aes(Revenue)) +
+    geom_bar(aes(fill = Weekend))+
+    labs(title = "Stacked Chart: Revenue by Day Type")
+```
+About three quarters of the data shows that a visit to the page did not result to the company making revenue i.e. the customer did not make a purchase.
+Of the quarter remaining, the company made revenue mostly during the weekdays.
+
+```{r}
+# Stacked bar chart: Visitor Type vs Month
+shop %>%
+    ggplot(aes(Month)) +
+    geom_bar(aes(fill = VisitorType))+
+    labs(title = "Stacked Chart: Visitor Type by Month")
+```
+- "Other" customer categories came to shop on November and December. It would be prudent to investigate who these other customers are.
+- May, Nov, March, and December in that order are the busy months.
+- During these months there is a higher number of new visitors which the company can attract using offers tailored for them to retain them.
+- Feb and June are the least busy months.
+- Feb seems to be ironical as we expect the Valentines day to shoot both traffic and sales for the company which is not the case.
+
+## Multivariate Analysis
+Analysis of three or more variables to draw insights and association between them.
+
+### Correlation Plots
+```{r}
+# calculate correlations
+correlations <- cor(shop[,1:10])
+# create correlation plot
+corrplot(correlations, method="circle")
+```
+A dot-representation was used where blue represents positive correlation and red negative.
+The deeper the colors(either blue or red) the strong the relationship between the variables.
+The diagonal are perfectly positively correlated because it shows the correlation of each attribute with itself.
+Checking keenly there is a strong postive relationship between a page and its respective duration for example ProductRelated page and Product Related Duration
+
+### Pair Plot
+```{r}
+# Continous variables pair plot
+
+pairs(shop[,1:10])
+```
+
+
+
+# K-Means Clustering
+It is an Unsupervised Machine Learning Technique.
+Preprocessing the Data
+```{r}
+# Step 1
+# Before implementing the solution,
+# we will convert some columns into the right data types.
+```
+
+```{r}
+glimpse(shop)
+```
+
+
+```{r}
+
+# # One hot encoding of the factor variables.
+
+dmy = dummyVars(" ~ .", data = shop)
+
+df = data.frame(predict(dmy, newdata = shop))
+```
+
+
+```{r}
+# Checking the data types of each attribute
+sapply(df, class)
+```
+
+
+```{r}
+# Confirming changes
+glimpse(df)
+
+```
+
+
+```{r}
+# Step 2
+# We are instructed to use Revenue as the class label,
+# Hence we will remove it and store it in another variable
+
+df_copy <- df[, -c(30:31)]
+shop.class<- shop[, "Revenue"]
+
+df_copy_copy <- df[, -c(30,31)]
+```
+
+
+```{r}
+# Previewing the class
+head(shop.class)
+```
+
+
+```{r}
+# Previewing the copy dataset with dummies
+head(df_copy)
+```
+
+
+```{r}
+# Step 3: Normalizing OR SCALING the data?? Lets see which gives the best:
+# This is important to ensure that no particular attribute,
+# Has more impact on clustering algorithm than others
+
+df_scaled <- scale(df_copy)
+```
+
+
+```{r}
+# After scaling the data lets see what we find in the output
+summary(df_scaled)
+```
+It is evident that there are some attributes still with large values compared to others.
+Scaling makes the data changes the data to have a mean 0.
+We will normalize the data and see if we get different results.
+
+```{r}
+# Normalizing the a copy of the original data
+
+shop_norm <- as.data.frame(apply(df_copy, 2, function(x) (x - min(x))/(max(x)-min(x))))
+```
+
+
+```{r}
+# summary of the normalized data.
+summary(shop_norm)
+```
+Here, we have a maximum value of 1 and minimum value of 0s and mean of close to zero in all attributes.
+We will use the NORMALIZED dataset for clustering.
+
+
+
+```{r}
+# Applying K-Means  Clustering algorithm 
+# Using 3 centroids as K=3
+
+result <- kmeans(shop_norm, 10)
+```
+
+
+```{r}
+
+# Previewing the number of records in each cluster
+
+result$size
+```
+
+
+```{r}
+
+# Viewing the cluster center datapoints by each attribute
+
+result$centers
+```
+
+```{r}
+
+# Plotting two variables to see how their data points 
+# have been distributed in the cluster
+# Product Related, vs Product Related Duration
+
+plot(shop_norm[, 5:6], col = result$cluster)
+```
+
+
+```{r}
+# Product Related, vs Product Related Duration
+
+plot(shop_norm[, 7:8], col = result$cluster)
+```
+
+# Hierachial Clustering
+```{r}
+
+# We use R function hclust() 
+# For hierarchical clustering
+# First we use the dist() to compute the Euclidean distance btwn obs
+# d will be the first argument in the hclust() dissimilairty matrix
+# 
+
+d <- dist(shop_norm, method = "euclidean")
+
+# We then apply hierarchical clustering using the Ward's method
+
+res.hc <- hclust(d, method = "ward.D2")
+
+# Lastly we plot the obtained dendrogram
+#--
+
+plot(res.hc, cex = 0.6, hang = -1)
+```
+
