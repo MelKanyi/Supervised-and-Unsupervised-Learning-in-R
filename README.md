@@ -40,7 +40,7 @@
 ## Setup/Installation Requirements
 
 * R programming
-* Environments : Jupyter lab / Google colab environment / R Studio
+* Environments : Jupyter lab / R Studio
 * Github
 
 ## Known Bugs
